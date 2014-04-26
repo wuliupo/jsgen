@@ -1,3 +1,6 @@
+'use strict';
+/*global require, module, Buffer, jsGen*/
+
 /*
     convertID(id);
     getArticlesIndex(date, limit, callback);
@@ -11,35 +14,38 @@
     setNewArticle(articleObj, callback);
     delArticle(_idArray, callback);
  */
-var union = jsGen.lib.tools.union,
+var noop = jsGen.lib.tools.noop,
+    union = jsGen.lib.tools.union,
     intersect = jsGen.lib.tools.intersect,
     IDString = jsGen.lib.json.IDString,
     defautArticle = jsGen.lib.json.Article,
-    globalConfig = jsGen.lib.json.GlobalConfig;
+    globalConfig = jsGen.lib.json.GlobalConfig,
+    callbackFn = jsGen.lib.tools.callbackFn,
+    wrapCallback = jsGen.lib.tools.wrapCallback,
+    converter = jsGen.lib.converter,
+    articles = jsGen.dao.db.bind('articles');
 
-var that = jsGen.dao.db.bind('articles', {
+articles.bind({
 
     convertID: function (id) {
         switch (typeof id) {
-            case 'string':
-                id = id.substring(1);
-                id = jsGen.lib.converter(id, 62, IDString);
-                return id;
-            case 'number':
-                id = jsGen.lib.converter(id, 62, IDString);
-                while (id.length < 3) {
-                    id = '0' + id;
-                }
-                id = 'A' + id;
-                return id;
-            default:
-                return null;
+        case 'string':
+            id = id.substring(1);
+            return converter(id, 62, IDString);
+        case 'number':
+            id = converter(id, 62, IDString);
+            while (id.length < 3) {
+                id = '0' + id;
+            }
+            return 'A' + id;
+        default:
+            return null;
         }
     },
 
     getLatestId: function (callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.findOne({}, {
+        callback = callback || callbackFn;
+        this.findOne({}, {
             sort: {
                 _id: -1
             },
@@ -53,8 +59,8 @@ var that = jsGen.dao.db.bind('articles', {
     },
 
     getArticlesIndex: function (callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.find({}, {
+        callback = callback || callbackFn;
+        this.find({}, {
             sort: {
                 _id: 1
             },
@@ -63,6 +69,7 @@ var that = jsGen.dao.db.bind('articles', {
             },
             fields: {
                 _id: 1,
+                author: 1,
                 date: 1,
                 display: 1,
                 status: 1,
@@ -73,9 +80,8 @@ var that = jsGen.dao.db.bind('articles', {
     },
 
     getArticle: function (_id, callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.findOne({
-            _id: _id
+        this.findOne({
+            _id: +_id
         }, {
             sort: {
                 _id: -1
@@ -100,49 +106,49 @@ var that = jsGen.dao.db.bind('articles', {
                 comment: 1,
                 commentsList: 1
             }
-        }, callback);
+        }, wrapCallback(callback));
     },
 
     setArticle: function (articleObj, callback) {
         var setObj = {},
-        newObj = {
-            author: 0,
-            date: 0,
-            display: 0,
-            status: 0,
-            refer: '',
-            title: '',
-            cover: '',
-            content: '',
-            hots: 0,
-            visitors: 0,
-            updateTime: 0,
-            collection: 0,
-            tagsList: [0],
-            comment: true
-        };
+            newObj = {
+                author: 0,
+                date: 0,
+                display: 0,
+                status: 0,
+                refer: '',
+                title: '',
+                cover: '',
+                content: '',
+                hots: 0,
+                visitors: 0,
+                updateTime: 0,
+                collection: 0,
+                tagsList: [0],
+                comment: true
+            };
 
         intersect(newObj, articleObj);
         setObj.$set = newObj;
         if (callback) {
-            that.findAndModify({
+            this.findAndModify({
                 _id: articleObj._id
             }, [], setObj, {
                 w: 1,
                 new: true
-            }, callback);
+            }, wrapCallback(callback));
         } else {
-            that.update({
+            this.update({
                 _id: articleObj._id
-            }, setObj);
+            }, setObj, noop);
         }
     },
 
     setFavor: function (articleObj) {
         var setObj = {},
-        newObj = {
-            favorsList: 0
-        };
+            newObj = {
+                favorsList: 0
+            };
 
         intersect(newObj, articleObj);
         if (newObj.favorsList < 0) {
@@ -156,16 +162,16 @@ var that = jsGen.dao.db.bind('articles', {
             };
         }
 
-        that.update({
+        this.update({
             _id: articleObj._id
-        }, setObj);
+        }, setObj, noop);
     },
 
     setOppose: function (articleObj) {
         var setObj = {},
-        newObj = {
-            opposesList: 0
-        };
+            newObj = {
+                opposesList: 0
+            };
 
         intersect(newObj, articleObj);
         if (newObj.opposesList < 0) {
@@ -179,16 +185,16 @@ var that = jsGen.dao.db.bind('articles', {
             };
         }
 
-        that.update({
+        this.update({
             _id: articleObj._id
-        }, setObj);
+        }, setObj, noop);
     },
 
     setMark: function (articleObj) {
         var setObj = {},
-        newObj = {
-            markList: 0
-        };
+            newObj = {
+                markList: 0
+            };
 
         intersect(newObj, articleObj);
         if (newObj.markList < 0) {
@@ -202,17 +208,17 @@ var that = jsGen.dao.db.bind('articles', {
             };
         }
 
-        that.update({
+        this.update({
             _id: articleObj._id
-        }, setObj);
+        }, setObj, noop);
     },
 
     setComment: function (articleObj, callback) {
         var setObj = {},
-        newObj = {
-            commentsList: 0
-        };
-        callback = callback || jsGen.lib.tools.callbackFn;
+            newObj = {
+                commentsList: 0
+            };
+
         intersect(newObj, articleObj);
         if (newObj.commentsList < 0) {
             newObj.commentsList = -newObj.commentsList;
@@ -225,21 +231,22 @@ var that = jsGen.dao.db.bind('articles', {
             };
         }
 
-        that.update({
+        this.update({
             _id: articleObj._id
         }, setObj, {
             w: 1
-        }, callback);
+        }, wrapCallback(callback));
     },
 
     setNewArticle: function (articleObj, callback) {
-        var article = union(defautArticle),
+        var that = this,
+            article = union(defautArticle),
             newArticle = union(defautArticle);
-        callback = callback || jsGen.lib.tools.callbackFn;
+        callback = callback || callbackFn;
         intersect(article, articleObj);
         union(newArticle, article);
 
-        that.getLatestId(function (err, doc) {
+        this.getLatestId(function (err, doc) {
             if (err) {
                 return callback(err, null);
             }
@@ -255,30 +262,29 @@ var that = jsGen.dao.db.bind('articles', {
                 w: 1,
                 upsert: true,
                 new: true
-            }, callback);
+            }, wrapCallback(callback));
         });
     },
 
     delArticle: function (_id, callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.remove({
-            _id: _id
+        this.remove({
+            _id: +_id
         }, {
             w: 1
-        }, callback);
+        }, wrapCallback(callback));
     }
 });
 
 module.exports = {
-    convertID: that.convertID,
-    getArticlesIndex: that.getArticlesIndex,
-    getLatestId: that.getLatestId,
-    getArticle: that.getArticle,
-    setArticle: that.setArticle,
-    setFavor: that.setFavor,
-    setOppose: that.setOppose,
-    setMark: that.setMark,
-    setComment: that.setComment,
-    setNewArticle: that.setNewArticle,
-    delArticle: that.delArticle
+    convertID: articles.convertID,
+    getArticlesIndex: articles.getArticlesIndex,
+    getLatestId: articles.getLatestId,
+    getArticle: articles.getArticle,
+    setArticle: articles.setArticle,
+    setFavor: articles.setFavor,
+    setOppose: articles.setOppose,
+    setMark: articles.setMark,
+    setComment: articles.setComment,
+    setNewArticle: articles.setNewArticle,
+    delArticle: articles.delArticle
 };

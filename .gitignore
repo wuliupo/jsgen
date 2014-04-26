@@ -11,13 +11,13 @@ test.js
 pids
 logs
 results
+backup/
 node_modules/
 test/
-mylogs/
 json/
 scss/
-config/config.js
-tmp/
+static/node_modules/
+static/src/bower_components/
 
 npm-debug.log
 .DS_Store

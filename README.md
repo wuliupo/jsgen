@@ -1,50 +1,71 @@
-{jsGen} <small>0.3.3</small>
+{jsGen} <small>0.7.x</small>
 =======
 **——JavaScript Generated**
 
+### [ENGLISH README][12]
+
 ### 在线演示及交流社区：[AngularJS中文社区][2]
+
+### 注意，从0.6.x版使用了redis！请先安装redis再启动jsGen！
+
+### 0.7.x更新说明（开发中）
+
+ 1. 调整前端代码框架，使用bower和gruntjs管理代码;
+ 2. **第一次启动需带`install`参数，用于初始化MongoDB数据库;**
+ 3. 文章编辑页面增加localStorage本地存储;
+ 4. 线上模式和开发模式的端口统一为3000，进入开发模式的命令为:
+
+    node app.js --dev
+
+**v0.7.7版 升级了账号密码系统，v0.7.6及之前的版本升级后需更新数据库，请运行 `node app.js update-passwd` **
 
 ### 简介 (Introduction)
 
-[JsGen][1] is a next generation，free, open source web software that you can generate a powerful website, such as blog, forum, etc. It is coded by pure JavaScript, based on Node.js, AngularJS, MongoDB.
+[JsGen][1]是用纯JavaScript编写的新一代开源社区网站系统，主要用于搭建SNS类型的专业社区，对客户端AngularJS应用稍作修改也可变成多用户博客系统、论坛或者CMS内容管理系统。
 
-jsGen是用纯JavaScript编写的新一代开源社区网站系统，主要用于搭建SNS类型的专业社区，对客户端AngularJS应用稍作修改也可变成多用户博客系统、论坛或者CMS内容管理系统。
-
-Node.js provide REST API server, AngularJS web app gets data from server and generate the view to user.
-
-jsGen基于NodeJS编写服务器端程序，提供静态文件响应和REST API接口服务。基于AngularJS编写浏览器端应用，构建交互式网页UI视图;基于MongoDB编写数据存储系统。
+jsGen基于NodeJS编写服务器端程序，提供静态文件响应和REST API接口服务。基于AngularJS编写浏览器端应用，构建交互式网页UI视图。基于MongoDB编写数据存储系统。
 
 #### 安装 (Installation)
 
-**Dependencies: Node.js 0.10.x and mongoDB 2.4.x.**
-
 **系统需要Node.js 0.10.x和mongoDB 2.4.x**
+**Windows环境需要Python2.7和VS2012（用于编译node-gyp及其它需要编译的Node.js插件）**
 
-config目录下的config.js配置jsGen运行参数，包括监听端口（默认3000）、数据库等，内有说明。
+**Dependencies: Node.js 0.10.x, redis 2.6.12, mongoDB 2.4.x.**
+**Windows: Python2.7 and VS2012**
+
+config目录下的config.js配置jsGen运行参数，包括监听端口、数据库等，内有说明。
 
 api目录下的install.js是jsGen运行初始化文件，设置管理员初始密码，邮箱，内有说明。
 
     git clone git://github.com/zensh/jsgen.git
     cd jsgen
     npm install node-gyp    //windows需要先运行此命令，linux不需要
-                                           //请参考 https://github.com/TooTallNate/node-gyp/wiki/Visual-Studio-2010-Setup
-    npm install                     //npm安装依赖模块，请确保依赖模块全部安装好。
-    npm start                       //启动jsgen（或者 node app.js）
+                            //此命令依赖python和vs2012，请参考 https://github.com/TooTallNate/node-gyp/wiki/Visual-Studio-2010-Setup
+    npm install             //npm安装依赖模块，请确保依赖模块全部安装好。
+                            //windows下请运行 npm install --msvs_version=2012
+    node app.js install     //启动jsGen之前，初始化MongoDB数据库
+    node app.js [recache]   //正式启动，可选参数 `recache`，启动时重建redis缓存
 
-浏览器端输入网址[http://localhost:3000/](http://localhost:3000/)即可访问。
+    npm start               //正常启动，或 `node app.js`
 
-Administrator username: **admin** password: **admin@zensh.com** ，You can change it after login.
+浏览器端输入网址[http://localhost/](http://localhost/)即可访问。
 
-管理员用户名: **admin** 密码: **admin@zensh.com** ，你可以在后台修改。
+默认的管理员用户名: **admin** 密码: **admin@jsgen.org**。
+
+Default administrator username: **admin** password: **admin@jsgen.org**.
 
 #### 升级 (Update)
 
-    git pull                   //获取jsGen更新
-    npm update          //获取Node.js模块更新
-    npm start              //重启jsGen
-    rm tmp/static/*    //删除js、css静态缓存,可能会需要清空浏览器端缓存
+    git pull origin     //更新jsGen
+    npm update          //更新Node.js模块
 
 ### 更新 (Changelog)
+### 0.6.x更新说明
+ + 2013/11/02 jsGen v0.7.0 调整前端代码结构，使用bower和grunt管理前端代码，增加localStorage。
+ + 2013/08/25 jsGen v0.6.x 完全重构Node.js服务器端代码。使用redis作为缓存，使用then.js处理异步任务，重构服务后台代码。
+ + 2013/07/29 jsGen v0.5.0 完全重构AngularJS客户端部分，服务器端代码做相应调整。使用pure CSS框架，优化UI，兼容IE8！重写并优化AngularJS代码，添加若干很酷的功能代码，在学习AngularJS的码农不妨看看！
+ + 2013/06/01 jsGen v0.3.5 修复若干bug，标签允许空格。
+ + 2013/05/26 jsGen v0.3.4 修复管理后台不出现网站设置的bug，管理后台增加邮箱验证设置，默认关闭邮箱验证。
  + 2013/04/25 jsGen v0.3.3 优化浏览器端AngularJS应用。
  + 2013/04/25 jsGen v0.3.2 修复评论编辑器按钮隐藏、输入卡的bug（修改了Markdown.Editor.js），指令前缀改为gen。
  + 2013/04/25 jsGen v0.3.1 浏览器端AngularJS应用自动更新功能。
@@ -64,59 +85,78 @@ Administrator username: **admin** password: **admin@zensh.com** ，You can chang
  + 2013/03/30 jsGen v0.1.1 修正几个bug，添加forever启动脚本。
  + 2013/03/29 jsGen v0.1.0 测试版发布。
 
+### 0.5.x更新说明
+
+ 1. 兼容IE8。
+ 2. 放弃Bootstrap 3框架，改用YUI的pure CSS框架，并入部分Bootstrap框架代码，如Modal、Tooltip等。
+ 3. 使用超酷的Icon：Font-Awesome。
+ 4. 动画效果，文章列表精简/摘要模式切换。
+ 5. toastr信息提示条，用于显示错误或成功的请求信息。
+ 6. 优化响应式设计，手机、平板浏览器可完美访问。
+ 7. 分离语言机制，可方便切换成其它语言（模板中的语言暂未分离，待完成）。
+ 8. 完全重构AngularJS代码，各种很酷的功能代码如下。
+ 9. 全局Loading检测，自动响应loading状态，默认延迟1秒响应loading。可响应AngularJS内部所有http请求，如API请求、html模板请求等。
+ 10. 全局Error检测，自动过滤错误响应（即进入到controlller中的都是成功响应），包括服务器自身的错误响应如404、500等和服务器定义的错误响应，toastr显示错误信息。
+ 11. 统一的Validation验证机制，通过`genTooltip`指令收集并提示无效输入，配合`uiValidate`可对输入完成任何自定义验证。主要应用于用户登录、用户注册、用户信息修改、发表文章、发表评论，管理后台配置等。
+ 12. 统一的Dirty检测机制，通过`genModal`指令和`union/intersect`函数实现，在发表/编辑文章页面、用户信息配置页面、后台管理页面等修改了数据时，若未保存离开，提示警告信息。
+ 13. 通用的`genPagination`指令，效果仿Github，可实现有链接和无链接分页导航。前者生成url，可产生导航记录（浏览器前进后退），具体效果见文章列表。后者通过事件机制实现，不改变url，无导航记录（不能前进后退），具体效果见文章详情页面中的评论分页导航。
+ 14. 图片预占位异步加载`genSrc`指令，目前主要用于用户头像。jsGen使用Gavatar，再用户的Gavatar没用加载完成之前，显示本地服务器的占位图像，加载完成后自动替换成用户头像。
+ 15. 还有其他很酷的代码如定时器触发器`timing`，自动定位页面元素的`anchorScroll`（动画效果，方便好使，取代AngularJS内置的$anchorScroll），无须担心digest错误的`applyFn`（代替$apply）,通用的Cookies存储服务`myConf`等
+
 ### 目录和文件 (menus and files)
 
-    +api    // 服务器端API目录
-        -article.js    // 文章和评论系统API接口
+    +api                // 服务器端API目录
+        -article.js       // 文章和评论系统API接口
         -collection.js    // 合集系统API接口
-        -index.js    // 网站全局信息API接口
-        -install.js    // 初始化安装程序
-        -message.js    // 站内信息系统API接口
-        -tag.js    // 标签系统API接口
-        -user.js    // 用户系统API
+        -index.js         // 网站全局信息API接口
+        -install.js       // 初始化安装程序
+        -message.js       // 站内信息系统API接口
+        -tag.js           // 标签系统API接口
+        -user.js          // 用户系统API
     +config
-        -config.js    // 网站配置文件
-    +dao    // MongoDB数据库访问层
+        -config.js        // 网站配置文件
+    +dao                // MongoDB数据库访问层
         -articleDao.js    // 文章评论访问接口
-        -collectionDao.js    // 合集系统访问接口
-        -indexDao.js    // 网站全局信息访问接口
+        -collectionDao.js // 合集系统访问接口
+        -indexDao.js      // 网站全局信息访问接口
         -messageDao.js    // 站内信息系统访问接口
-        -mongoDao.js    // MongoDB访问接口
-        -tagDao.js    // 标签系统访问接口
-        -userDao.js    // 用户系统访问接口
-    +lib    // 通用工具模块
-        -anyBaseConverter.js    // 通用进制转换器
-        -cacheLRU.js    // LRU缓存模块
-        -cacheTL.js     // TL缓存模块
-        -email.js    // SMTP Email模块
-        -json.js    // 数据库格式模板
-        -msg.js    // 程序信息
-        -tools.js    // 其它通用工具函数
-    +mylogs    // 日志目录，网站运行后产生内容
-    +node_modules    // Node.js模块目录，npm install后产生内容
-    +static    // 浏览器端AngularJS WEB应用
+        -mongoDao.js      // MongoDB访问接口
+        -tagDao.js        // 标签系统访问接口
+        -userDao.js       // 用户系统访问接口
+    +lib                // 通用工具模块
+        -anyBaseConverter.js  // 通用进制转换器
+        -cacheLRU.js      // LRU缓存模块
+        -cacheTL.js       // TL缓存模块
+        -email.js         // SMTP Email模块
+        -json.js          // 数据库格式模板
+        -msg.js           // 程序信息
+        -tools.js         // 核心工具函数
+    +mylogs             // 日志目录，网站运行后产生内容
+    +node_modules       // Node.js模块目录，npm install后产生内容
+    +static             // 浏览器端AngularJS WEB应用
         +css
-        +fonts
+        +font-awesome     //很酷的web icon
         +img
         +js
-            +lib    // AngularJS、jQuery等js模块
-            -app.js    // 路由及初始化js模块
-            -controllers.js    // 控制器js模块
-            -directives.js    // 指令js模块
-            -filters.js    // 过滤器js模块
-            -services.js    // 通用服务js模块
-            -tools.js    // 工具函数js模块
-        +md    // MarkDown文档
-        +tpl    // html模板
+            +lib            // AngularJS、jQuery等js模块
+            -app.js         // 全局初始化模块
+            -controllers.js // 控制器模块
+            -directives.js  // 指令模块
+            -filters.js     // 过滤器模块
+            -locale_zh-cn.js// 语言包
+            -router.js      // 路由模块
+            -services.js    // 通用服务模块
+            -tools.js       // 工具函数模块
+        +md               // MarkDown文档
+        +tpl              // html模板
         -favicon.ico
-        -index.html    // AngularJS WEB应用入口文件
-        -index_dev.html  // 开发模式入口文件，未压缩js，方便调试
-    +tmp    // 缓存目录
-        +static    //  压缩js、css缓存目录，必须
-        +tpl    // html模板文件缓存目录
-        +upload    // 上传文件缓存目录
-    -app.js    // Node.js入口文件
-    -package.json    // jsGen信息文件
+        -index.html       // AngularJS WEB应用入口文件
+    +tmp                // 缓存目录
+        +static           // 压缩js、css缓存目录，必须
+        +tpl              // html模板文件缓存目录
+        +upload           // 上传文件缓存目录
+    -app.js             // Node.js入口文件
+    -package.json       // jsGen信息文件
 
 ### 特点 (Features)
 
@@ -144,14 +184,9 @@ Administrator username: **admin** password: **admin@zensh.com** ，You can chang
 
 **jsGen** 是为[AngularJS中文社区][2]开发的网站系统，测试版已经上线，还请大家温柔测试，积极反馈Bug。
 
-AngularJS中文社区改版之后，致力于形成一个以AngularJS为主，WEB相关的各种JavaScript技术并行的专业技术社区，我本人会将开发jsGen的经验心得形成文字与大家分享。
-
-由于jsGen全新的构架设计未经验证，测试版可能出现各种bug，希望大家能积极评测反馈。jsGen代码将会持续优化，并完善相关代码解释说明文档。对于JS新手来说，这也许是个好的学习实例。
-
-非常感谢[GitHub][3]和在GitHub上贡献开源代码的[Node.js][4]、[AngularJS][5]、[MongoDB][6]、[Bootstrap][7]以及其他JavsScript插件的伟大码农们，还有国内码农贡献的[rrestjs][8]、[mongoskin][9]、[xss][10]等，是你们的贡献，让jsGen得以成型。jsGen也是开源免费。
+非常感谢[GitHub][3]和在GitHub上贡献开源代码的[Node.js][4]、[AngularJS][5]、[MongoDB][6]、[Bootstrap][7]以及其他JavsScript插件的伟大码农们，还有国内码农贡献的[rrestjs][8]、[mongoskin][9]、[xss][10]等。jsGen也是开源免费。
 
 ### MIT 协议
-
 
   [1]: https://github.com/zensh/jsgen
   [2]: http://angularjs.cn
@@ -164,3 +199,4 @@ AngularJS中文社区改版之后，致力于形成一个以AngularJS为主，WE
   [9]: https://github.com/kissjs/node-mongoskin
   [10]: https://github.com/leizongmin/js-xss
   [11]: http://cnodejs.org/
+  [12]: https://github.com/zensh/jsgen/blob/master/README_en.md

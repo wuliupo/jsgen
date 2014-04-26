@@ -1,3 +1,6 @@
+'use strict';
+/*global require, module, Buffer, jsGen*/
+
 /*
     convertID(id);
     getTagsNum(callback);
@@ -8,39 +11,41 @@
     setNewTag(tagObj, callback);
     delTag(_idArray, callback);
  */
-var union = jsGen.lib.tools.union,
+var noop = jsGen.lib.tools.noop,
+    union = jsGen.lib.tools.union,
     intersect = jsGen.lib.tools.intersect,
     IDString = jsGen.lib.json.IDString,
-    defautTag = jsGen.lib.json.Tag;
+    defautTag = jsGen.lib.json.Tag,
+    callbackFn = jsGen.lib.tools.callbackFn,
+    wrapCallback = jsGen.lib.tools.wrapCallback,
+    converter = jsGen.lib.converter,
+    tags = jsGen.dao.db.bind('tags');
 
-var that = jsGen.dao.db.bind('tags', {
+tags.bind({
 
     convertID: function (id) {
         switch (typeof id) {
-            case 'string':
-                id = id.substring(1);
-                id = jsGen.lib.converter(id, 62, IDString);
-                return id;
-            case 'number':
-                id = jsGen.lib.converter(id, 62, IDString);
-                while (id.length < 3) {
-                    id = '0' + id;
-                }
-                id = 'T' + id;
-                return id;
-            default:
-                return null;
+        case 'string':
+            id = id.substring(1);
+            return converter(id, 62, IDString);
+        case 'number':
+            id = converter(id, 62, IDString);
+            while (id.length < 3) {
+                id = '0' + id;
+            }
+            return 'T' + id;
+        default:
+            return null;
         }
     },
 
     getTagsNum: function (callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.count(callback);
+        this.count(wrapCallback(callback));
     },
 
     getLatestId: function (callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.findOne({}, {
+        callback = callback || callbackFn;
+        this.findOne({}, {
             sort: {
                 _id: -1
             },
@@ -54,8 +59,8 @@ var that = jsGen.dao.db.bind('tags', {
     },
 
     getTagsIndex: function (callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.find({}, {
+        callback = callback || callbackFn;
+        this.find({}, {
             sort: {
                 _id: 1
             },
@@ -72,9 +77,8 @@ var that = jsGen.dao.db.bind('tags', {
     },
 
     getTag: function (_id, callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.findOne({
-            _id: _id
+        this.findOne({
+            _id: +_id
         }, {
             sort: {
                 _id: -1
@@ -86,16 +90,16 @@ var that = jsGen.dao.db.bind('tags', {
                 users: 1,
                 usersList: 1
             }
-        }, callback);
+        }, wrapCallback(callback));
     },
 
     setTag: function (tagObj, callback) {
         var setObj = {},
-        newObj = {
-            tag: '',
-            articlesList: 0,
-            usersList: 0
-        };
+            newObj = {
+                tag: '',
+                articlesList: 0,
+                usersList: 0
+            };
 
         newObj = intersect(newObj, tagObj);
         if (newObj.tag) {
@@ -139,28 +143,29 @@ var that = jsGen.dao.db.bind('tags', {
         }
 
         if (callback) {
-            that.findAndModify({
+            this.findAndModify({
                 _id: tagObj._id
             }, [], setObj, {
                 w: 1,
-                new: true
-            }, callback);
+                'new': true
+            }, wrapCallback(callback));
         } else {
-            that.update({
+            this.update({
                 _id: tagObj._id
-            }, setObj);
+            }, setObj, noop);
         }
     },
 
     setNewTag: function (tagObj, callback) {
-        var tag = union(defautTag),
+        var that = this,
+            tag = union(defautTag),
             newTag = union(defautTag);
-        callback = callback || jsGen.lib.tools.callbackFn;
+        callback = callback || callbackFn;
 
         newTag = intersect(newTag, tagObj);
         newTag = union(tag, newTag);
 
-        that.getLatestId(function (err, doc) {
+        this.getLatestId(function (err, doc) {
             if (err) {
                 return callback(err, null);
             }
@@ -174,28 +179,27 @@ var that = jsGen.dao.db.bind('tags', {
             }, [], newTag, {
                 w: 1,
                 upsert: true,
-                new: true
-            }, callback);
+                'new': true
+            }, wrapCallback(callback));
         });
     },
 
     delTag: function (_id, callback) {
-        callback = callback || jsGen.lib.tools.callbackFn;
-        that.remove({
-            _id: _id
+        this.remove({
+            _id: +_id
         }, {
             w: 1
-        }, callback);
-    },
+        }, wrapCallback(callback));
+    }
 });
 
 module.exports = {
-    convertID: that.convertID,
-    getTagsNum: that.getTagsNum,
-    getLatestId: that.getLatestId,
-    getTagsIndex: that.getTagsIndex,
-    getTag: that.getTag,
-    setTag: that.setTag,
-    setNewTag: that.setNewTag,
-    delTag: that.delTag
+    convertID: tags.convertID,
+    getTagsNum: tags.getTagsNum,
+    getLatestId: tags.getLatestId,
+    getTagsIndex: tags.getTagsIndex,
+    getTag: tags.getTag,
+    setTag: tags.setTag,
+    setNewTag: tags.setNewTag,
+    delTag: tags.delTag
 };

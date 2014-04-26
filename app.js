@@ -1,103 +1,161 @@
-var domain = require('domain'),
-    http = require('http'),
-    fs = require('fs'),
-    path = require('path'),
-    zlib = require('zlib');
-var processPath = path.dirname(process.argv[1]);
-var serverDm = domain.create();
-global.jsGen = {}; // 注册全局变量jsGen
-jsGen.version = '0.3.3';
+'use strict';
+/*global global, require, process, module, jsGen, _restConfig*/
 
-serverDm.on('error', function (err) {
-    delete err.domain;
-    jsGen.errlog.error(err);
+var fs = require('fs'),
+    path = require('path'),
+    zlib = require('zlib'),
+    util = require('util'),
+    http = require('http'),
+    domain = require('domain'),
+    serverDm = domain.create(),
+    processPath = path.dirname(process.argv[1]);
+
+global.jsGen = {}; // 注册全局变量jsGen
+module.exports.conf = require('./config/config'); // 注册rrestjs配置文件
+module.exports.conf_dev = require('./config/config_dev'); // 注册开发模式配置文件
+
+serverDm.on('error', function (error) {
+    delete error.domain;
+    console.error(error);
+    jsGen.serverlog.error(error);
 });
+
 serverDm.run(function () {
-    jsGen.conf = module.exports.conf = require('./config/config'); // 注册rrestjs配置文件
     jsGen.module = {};
-    jsGen.module.rrestjs = require('rrestjs');
-    jsGen.module.marked = require('marked');
-    jsGen.module.mongoskin = require('mongoskin');
-    jsGen.module.nodemailer = require('nodemailer');
+    jsGen.module.os = require('os');
     jsGen.module.xss = require('xss');
-    jsGen.errlog = jsGen.module.rrestjs.restlog;
+    jsGen.module.then = require('thenjs');
+    jsGen.module.marked = require('marked');
+    jsGen.module.rrestjs = require('rrestjs');
+    jsGen.module.nodemailer = require('nodemailer');
+    jsGen.serverlog = jsGen.module.rrestjs.restlog;
+    jsGen.conf = jsGen.module.rrestjs.config;
     jsGen.lib = {};
-    jsGen.lib.tools = require('./lib/tools.js');
-    jsGen.lib.CacheLRU = require('./lib/cacheLRU.js');
-    jsGen.lib.CacheTL = require('./lib/cacheTL.js');
     jsGen.lib.msg = require('./lib/msg.js');
     jsGen.lib.json = require('./lib/json.js');
-    jsGen.lib.converter = require('./lib/anyBaseConverter.js');
+    jsGen.lib.tools = require('./lib/tools.js');
     jsGen.lib.email = require('./lib/email.js');
+    jsGen.lib.redis = require('./lib/redis.js');
+    jsGen.lib.CacheLRU = require('./lib/cacheLRU.js');
+    jsGen.lib.converter = require('./lib/anyBaseConverter.js');
     jsGen.Err = jsGen.lib.tools.Err;
     jsGen.dao = {};
     jsGen.dao.db = require('./dao/mongoDao.js').db;
-    jsGen.dao.article = require('./dao/articleDao.js');
-    jsGen.dao.collection = require('./dao/collectionDao.js');
-    jsGen.dao.index = require('./dao/indexDao.js');
-    jsGen.dao.message = require('./dao/messageDao.js');
     jsGen.dao.tag = require('./dao/tagDao.js');
     jsGen.dao.user = require('./dao/userDao.js');
-    jsGen.config = {};
-    (function () {
-        var that = this;
-        this._update = function (obj) {
-            jsGen.lib.tools.union(this, obj);
-            this._initTime = Date.now();
-        };
-        jsGen.dao.index.getGlobalConfig(serverDm.intercept(function (doc) {
-            if (!doc) {
-                var install = require('./api/install.js');
-                install(function () {
-                    var doc = jsGen.lib.json.GlobalConfig;
-                    todo(doc);
-                });
-            } else todo(doc);
+    jsGen.dao.index = require('./dao/indexDao.js');
+    jsGen.dao.article = require('./dao/articleDao.js');
+    jsGen.dao.message = require('./dao/messageDao.js');
+    jsGen.dao.collection = require('./dao/collectionDao.js');
 
-            function todo(doc) {
-                that._update(doc);
-                jsGen.cache = {};
-                jsGen.cache.pagination = new jsGen.lib.CacheTL(doc.paginationCache[0] * 1000, doc.paginationCache[1]);
-                jsGen.cache.timeInterval = new jsGen.lib.CacheTL(doc.TimeInterval * 1000, 0, true);
-                jsGen.cache.online = new jsGen.lib.CacheTL(900000, 0, true);
-                jsGen.cache.user = new jsGen.lib.CacheLRU(doc.userCache);
-                jsGen.cache.article = new jsGen.lib.CacheLRU(doc.articleCache);
-                jsGen.cache.comment = new jsGen.lib.CacheLRU(doc.commentCache);
-                jsGen.cache.list = new jsGen.lib.CacheLRU(doc.listCache);
-                jsGen.cache.tag = new jsGen.lib.CacheLRU(doc.tagCache);
-                jsGen.cache.collection = new jsGen.lib.CacheLRU(doc.collectionCache);
-                jsGen.cache.message = new jsGen.lib.CacheLRU(doc.messageCache);
-                jsGen.cache.updateList = [];
-                jsGen.cache.hotsList = [];
-                jsGen.cache.hotCommentsList = [];
-                jsGen.robot = {};
-                jsGen.robot.reg = new RegExp(doc.robots || 'Baiduspider|Googlebot|BingBot|Slurp!', 'i');
-                jsGen.api = {};
-                jsGen.api.index = require('./api/index.js');
-                jsGen.api.user = require('./api/user.js');
-                jsGen.api.article = require('./api/article.js');
-                jsGen.api.tag = require('./api/tag.js');
-                jsGen.api.collection = require('./api/collection.js');
-                jsGen.api.message = require('./api/message.js');
-                fs.readFile(processPath + '/package.json', 'utf8', serverDm.intercept(function (data) {
-                    jsGen.config.info = JSON.parse(data);
-                    jsGen.config.info.version = jsGen.version;
-                    jsGen.config.info.nodejs = process.versions.node;
-                    jsGen.config.info.rrestjs = _restConfig._version;
-                }));
-                createServer();
-            };
-        }));
-    }).call(jsGen.config);
-});
+    jsGen.thenErrLog = function (defer, err) {
+        console.error(err);
+        jsGen.serverlog.error(err);
+    };
 
-function createServer() {
-    var server = http.createServer(function (req, res) {
-        var dm = domain.create();
-        dm.on('error', function (err) {
-            console.log(err);
+    var redis = jsGen.lib.redis,
+        then = jsGen.module.then,
+        each = jsGen.lib.tools.each,
+        CacheLRU = jsGen.lib.CacheLRU,
+        extend = jsGen.lib.tools.extend,
+        resJson = jsGen.lib.tools.resJson,
+        TimeLimitCache = jsGen.lib.redis.TimeLimitCache;
+
+    function exit() {
+        redis.close();
+        jsGen.dao.db.close();
+        return process.exit(1);
+    }
+
+    // 带'install'参数启动则初始化MongoDB，完成后退出
+    if (process.argv.indexOf('install') > 0) {
+        require('./lib/install.js')().then(function () {
+            console.log('jsGen installed!');
+            return exit();
+        }).fail(jsGen.thenErrLog);
+        return;
+    }
+
+    // v0.7.5升级至v0.7.6 更新账号密码
+    if (process.argv.indexOf('update-passwd') > 0) {
+        require('./patch/passwd_0.7.5-0.7.6.js')().then(function () {
+            return exit();
+        }).fail(jsGen.thenErrLog);
+        return;
+    }
+
+    then.parallel([
+        function (defer) {
+            // 连接 mongoDB，读取config
+            jsGen.dao.index.getGlobalConfig(defer);
+        },
+        function (defer) {
+            // 连接 redis
+            redis.connect(defer);
+        }
+    ]).then(function (defer, result) {
+        // 初始化config缓存
+        redis.initConfig(result[0], defer);
+    }).then(function (defer, config) {
+        jsGen.config = config;
+        redis.userCache.index.total(defer); // 读取user缓存
+    }).then(function (defer, users) {
+        if (!users || process.argv.indexOf('recache') > 0) {
+            // user缓存为空，则判断redis缓存为空，需要初始化
+            // 或启动时指定了recache，手动初始化
+            var recache = require('./lib/recache.js');
+            recache(defer);
+        } else {
+            defer();
+        }
+    }).parallel([
+        function (defer) {
+            fs.readFile(processPath + '/package.json', 'utf8', defer); // 读取软件版本信息
+        },
+        function (defer) {
+            fs.readFile(processPath + jsGen.conf.staticFolder + '/index.html', 'utf8', defer); // 读取首页模板
+        },
+        function (defer) {
+            fs.readFile(processPath + jsGen.conf.staticFolder + '/robots.txt', 'utf8', defer); // 读取robots.txt
+        }
+    ]).then(function (defer, result) {
+        var api = ['index', 'user', 'article', 'tag', 'collection', 'message'],
+            config = jsGen.config;
+
+        // 初始化内存缓存
+        jsGen.cache = {};
+        jsGen.cache.tag = new CacheLRU(config.tagCache);
+        jsGen.cache.user = new CacheLRU(config.userCache);
+        jsGen.cache.list = new CacheLRU(config.listCache);
+        jsGen.cache.article = new CacheLRU(config.articleCache);
+        jsGen.cache.comment = new CacheLRU(config.commentCache);
+        jsGen.cache.message = new CacheLRU(config.messageCache);
+        jsGen.cache.collection = new CacheLRU(config.collectionCache);
+        jsGen.cache.timeInterval = new TimeLimitCache(config.TimeInterval, 'string', 'interval', false);
+        jsGen.cache.pagination = new TimeLimitCache(config.paginationCache, 'array', 'pagination', true);
+
+        jsGen.robotReg = new RegExp(config.robots || 'Baiduspider|Googlebot|BingBot|Slurp!', 'i');
+        jsGen.api = {};
+        each(api, function (x) {
+            jsGen.api[x] = {}; // 初始化api引用，从而各api内部可提前获取其它api引用
+        });
+        each(api, function (x) {
+            extend(jsGen.api[x], require('./api/' + x + '.js')); // 扩展各api的具体方法
+        });
+
+        var packageInfo = JSON.parse(result[0]);
+        packageInfo.nodejs = process.versions.node;
+        packageInfo.rrestjs = _restConfig._version;
+        jsGen.config.info = packageInfo;
+
+        jsGen.cache.indexTpl = result[1];
+        jsGen.cache.robotsTxt = result[2];
+
+        // 数据准备就绪，初始化 http server
+
+        function errHandler(err, res, dm) {
             delete err.domain;
-            err.type = 'error';
+
             try {
                 res.on('finish', function () {
                     //jsGen.dao.db.close();
@@ -106,52 +164,59 @@ function createServer() {
                     });
                 });
                 if (err.hasOwnProperty('name')) {
-                    res.sendjson({
-                        err: err
-                    });
+                    res.sendjson(resJson(err));
                 } else {
-                    //console.log('ReqErr:******************');
-                    console.log(req.session.Uid + ':' + req.method + ' : ' + req.path);
-                    jsGen.errlog.error(err);
-                    res.sendjson({
-                        err: {
-                            name: '请求错误',
-                            message: '对不起，请求出错了！',
-                            type: 'error',
-                            url: '/'
-                        }
-                    });
+                    jsGen.serverlog.error(err);
+                    res.sendjson(resJson(jsGen.Err(jsGen.lib.msg.MAIN.requestDataErr)));
                 }
-            } catch (err) {
-                delete err.domain;
-                //console.log('CatchERR:******************');
-                jsGen.errlog.error(err);
+            } catch (error) {
+                delete error.domain;
+                jsGen.serverlog.error(error);
                 dm.dispose();
             }
-        });
-        dm.run(function () {
-            if (req.path[0] === 'api' && jsGen.api[req.path[1]]) {
-                jsGen.api[req.path[1]][req.method.toUpperCase()](req, res, dm);
-                if (req.path[1] === 'index') {
-                    jsGen.api.index.updateOnlineCache(req);
-                }
-            } else if (jsGen.robot.reg.test(req.useragent)) {
-                jsGen.api.article.robot(req, res, dm);
+        }
+
+        function router(req, res) {
+            var path = req.path[0].toLowerCase();
+
+            if (path === 'api' && jsGen.api[req.path[1]]) {
+                jsGen.api[req.path[1]][req.method](req, res); // 处理api请求
+            } else if (jsGen.robotReg.test(req.useragent)) {
+                jsGen.api.article.robot(req, res); // 处理搜索引擎请求
+            } else if (path === 'sitemap.xml') {
+                jsGen.api.article.sitemap(req, res); // 响应搜索引擎sitemap，动态生成
+            } else if (path === 'robots.txt') {
+                res.setHeader('Content-Type', 'text/plain');
+                res.send(jsGen.cache.robotsTxt);
             } else {
-                jsGen.config.visitors += 1;
-                jsGen.dao.index.setGlobalConfig({
-                    visitors: 1
-                });
-                res.setHeader("Content-Type", "text/html");
-                if (jsGen.indexTpl) {
-                    res.send(jsGen.indexTpl);
-                } else {
-                    fs.readFile(processPath + '/static/index.html', 'utf8', serverDm.intercept(function (data) {
-                        jsGen.indexTpl = data.replace(/_jsGenVersion_/g, jsGen.version);
-                        res.send(jsGen.indexTpl);
-                    }));
-                }
+                jsGen.config.visitors = 1; // 访问次数+1
+                res.setHeader('Content-Type', 'text/html');
+                res.send(jsGen.cache.indexTpl); // 响应首页index.html
             }
-        });
-    }).listen(jsGen.module.rrestjs.config.listenPort);
-};
+        }
+
+        function handler(req, res) {
+            var dm = domain.create();
+
+            res.throwError = function (defer, error) { // 处理then.js捕捉的错误
+                if (!util.isError(error)) {
+                    error = jsGen.Err(error);
+                }
+                errHandler(error, res, dm);
+            };
+            dm.on('error', function (error) { // 处理domain捕捉的错误
+                errHandler(error, res, dm);
+            });
+            dm.run(function () {
+                router(req, res); // 运行
+            });
+        }
+
+        http.createServer(handler).listen(jsGen.conf.listenPort);
+        console.log('jsGen start at ' + jsGen.conf.listenPort);
+    }).fail(function (defer, error) {
+        console.error(error);
+        jsGen.serverlog.error(error);
+        return exit();
+    });
+});
